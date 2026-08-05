@@ -6,22 +6,44 @@
     <title>State Affairs</title>
     <style>
         body { font-family: sans-serif; background: #f4f4f4; padding: 10px; }
-        .card { background: white; padding: 15px; margin: 10px 0; border-radius: 10px; }
-        h1 { color: #006a4e; }
+        .card { background: white; padding: 15px; margin: 10px 0; border-radius: 10px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        h1 { color: #006a4e; text-align: center; }
+        .error { color: red; text-align: center; }
+        .loading { text-align: center; color: #555; }
     </style>
 </head>
 <body>
-    <h1>🇧🇩 State Affairs</h1>
-    <div id="news"></div>
+    <h1>State Affairs</h1>
+    <div id="news" class="loading">⏳ খবর লোড হচ্ছে...</div>
+
     <script>
-        fetch('https://https://state-affairs.onrender.com/api/news')
-          .then(res => res.json())
+        // আপনার Render URL বসান (হুবহু নিচের লাইনে)
+        const API_URL = 'https://state-affairs.onrender.com/api/news'; 
+
+        fetch(API_URL)
+          .then(res => {
+              if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+              return res.json();
+          })
           .then(data => {
-              let html = '';
-              data.data.forEach(item => {
-                  html += `<div class="card"><h3>${item.title}</h3><p>${item.rewritten_content}</p><small>সূত্র: ${item.source}</small></div>`;
-              });
-              document.getElementById('news').innerHTML = html;
+              const container = document.getElementById('news');
+              if (data.status === 'success' && data.data && data.data.length > 0) {
+                  let html = '';
+                  data.data.forEach(item => {
+                      html += `<div class="card">
+                                  <h3>${item.title || 'শিরোনাম নেই'}</h3>
+                                  <p>${item.rewritten_content || item.original_content || 'বিস্তারিত নেই'}</p>
+                                  <small>📰 সূত্র: ${item.source || 'অজানা'} | 🕐 ${new Date(item.published_at).toLocaleString('bn-BD')}</small>
+                              </div>`;
+                  });
+                  container.innerHTML = html;
+              } else {
+                  container.innerHTML = '<p class="error">😔 কোনো খবর পাওয়া যায়নি। প্রথমে GitHub Actions রান করুন অথবা Supabase চেক করুন।</p>';
+              }
+          })
+          .catch(error => {
+              document.getElementById('news').innerHTML = `<p class="error">❌ সংযোগ সমস্যা! Render API চালু আছে কিনা চেক করুন।<br><small>${error.message}</small></p>`;
+              console.error('Fetch Error:', error);
           });
     </script>
 </body>
