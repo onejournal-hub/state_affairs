@@ -1,20 +1,27 @@
-from app.scraper import scrape_all_news
-from app.ai_processor import filter_important_news, rewrite_news
-from app.database import save_news_to_db
-import logging
+from fastapi import FastAPI
+from supabase import create_client
+import os
 
-logging.basicConfig(level=logging.INFO)
+# এনভায়রনমেন্ট ভেরিয়েবল রেন্ডার থেকে নেওয়া হবে (load_dotenv প্রয়োজন নেই)
+app = FastAPI(title="State Affairs API")
 
-def run_pipeline():
-    logging.info("খবর সংগ্রহ শুরু...")
-    all_news = scrape_all_news()
-    logging.info(f"মোট {len(all_news)}টি খবর পাওয়া গেছে")
-    important_news = filter_important_news(all_news, max_news=5)
-    logging.info(f"গুরুত্বপূর্ণ বাছাই করা হয়েছে {len(important_news)}টি")
-    for news in important_news:
-        rewritten = rewrite_news(news)
-        save_news_to_db(news['title'], news['summary'], rewritten, news['source'], news['link'])
-    logging.info("সব কাজ শেষ!")
+supabase = create_client(
+    os.getenv("SUPABASE_URL"),
+    os.getenv("SUPABASE_KEY")
+)
 
-if __name__ == "__main__":
-    run_pipeline()
+@app.get("/api/news")
+def get_all_news(limit: int = 20):
+    try:
+        response = supabase.table('news')\
+            .select('*')\
+            .order('published_at', desc=True)\
+            .limit(limit)\
+            .execute()
+        return {"status": "success", "data": response.data}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@app.get("/")
+def health_check():
+    return {"status": "State Affairs API is running!"}
