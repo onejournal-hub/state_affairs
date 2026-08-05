@@ -1,38 +1,44 @@
-from fastapi import FastAPI
-from supabase import create_client
-import os
+import sys
+import logging
+from app.scraper import scrape_all_news
+from app.ai_processor import filter_important_news, rewrite_news
+from app.database import save_news_to_db
 
-app = FastAPI(title="State Affairs API")
+logging.basicConfig(level=logging.INFO, 
+                    format='%(asctime)s - %(levelname)s - %(message)s')
 
-# Supabase ক্লায়েন্ট তৈরি
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-
-if SUPABASE_URL and SUPABASE_KEY:
-    supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-else:
-    supabase = None
-    print("Warning: Supabase credentials not set")
-
-@app.get("/api/news")
-def get_all_news(limit: int = 20):
-    if supabase is None:
-        return {"status": "error", "message": "Supabase not configured"}
+def run_pipeline():
     try:
-        response = supabase.table('news')\
-            .select('*')\
-            .order('published_at', desc=True)\
-            .limit(limit)\
-            .execute()
-        return {"status": "success", "data": response.data}
+        logging.info("🚀 খবর সংগ্রহ শুরু হচ্ছে...")
+        all_news = scrape_all_news()
+        if not all_news:
+            logging.warning("কোনো খবর পাওয়া যায়নি।")
+            return
+        
+        logging.info(f"মোট {len(all_news)}টি খবর পাওয়া গেছে")
+        
+        important_news = filter_important_news(all_news, max_news=5)
+        logging.info(f"গুরুত্বপূর্ণ বাছাই করা হয়েছে {len(important_news)}টি")
+        
+        for news in important_news:
+            try:
+                logging.info(f"✍️ রিরাইট করা হচ্ছে: {news['title']}")
+                rewritten = rewrite_news(news)
+                save_news_to_db(
+                    title=news['title'],
+                    original=news['summary'],
+                    rewritten=rewritten,
+                    source=news['source'],
+                    link=news['link']
+                )
+            except Exception as e:
+                logging.error(f"একটি খবর প্রসেস করতে সমস্যা: {e}")
+                continue  # বাকিগুলো চলতে থাকবে
+        
+        logging.info("✅ সব কাজ শেষ!")
     except Exception as e:
-        return {"status": "error", "message": str(e)}
+        logging.error(f"পাইপলাইনে গুরুতর ত্রুটি: {e}")
+        sys.exit(1)  # exit code 1 দিয়ে ফেল করবে
 
-@app.get("/")
-def health_check():
-    return {"status": "State Affairs API is running!"}
-
-# এই লাইনটি শুধুমাত্র লোকাল রানের জন্য (Render এ দরকার নেই)
 if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=10000)
+    run_pipeline()
