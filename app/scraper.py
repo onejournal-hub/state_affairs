@@ -1,0 +1,32 @@
+import feedparser
+import requests
+from bs4 import BeautifulSoup
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
+def fetch_from_rss(feed_url, source_name, limit=5):
+    articles = []
+    try:
+        feed = feedparser.parse(feed_url)
+        for entry in feed.entries[:limit]:
+            articles.append({
+                'title': entry.title,
+                'link': entry.link,
+                'summary': entry.summary,
+                'source': source_name
+            })
+        logging.info(f"{source_name} থেকে {len(articles)}টি খবর নেওয়া হয়েছে")
+    except Exception as e:
+        logging.error(f"{source_name} থেকে খবর নিতে সমস্যা: {e}")
+    return articles
+
+def scrape_all_news():
+    all_news = []
+    # RSS ফিড সোর্স (আপনি চাইলে আরও যোগ করতে পারেন)
+    rss_sources = [
+        ('http://feeds.prothomalo.com/prothomalo', 'Prothom Alo'),
+    ]
+    for feed_url, name in rss_sources:
+        all_news.extend(fetch_from_rss(feed_url, name))
+    return all_news
