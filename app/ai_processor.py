@@ -4,7 +4,7 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
-model = genai.GenerativeModel('gemini-2.0-flash-exp')
+model = genai.GenerativeModel('gemini-1.5-pro')      
 
 def filter_important_news(articles, max_news=5):
     if not articles:
