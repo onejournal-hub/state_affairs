@@ -23,11 +23,17 @@ def fetch_from_rss(feed_url, source_name, limit=5):
 
 def scrape_all_news():
     all_news = []
-    # RSS ফিড সোর্স (আপনি চাইলে আরও যোগ করতে পারেন)
+    # একাধিক RSS ফিড (বাংলা নিউজ সাইট)
     rss_sources = [
-        ('http://feeds.prothomalo.com/prothomalo', 'Prothom Alo'),
-        # ('https://www.thedailystar.net/rss.xml', 'Daily Star'),  # যদি কাজ করে
+        ('https://www.bdnews24.com/feed', 'bdnews24.com'),  # বিডিনিউজ২৪
+        ('https://www.jugantor.com/rss', 'Jugantor'),       # যুগান্তর
+        ('https://www.dailyinqilab.com/rss.xml', 'Inqilab'), # দৈনিক ইনকিলাব
+        # ('http://feeds.prothomalo.com/prothomalo', 'Prothom Alo'), # প্রথম আলো (ঐচ্ছিক)
     ]
     for feed_url, name in rss_sources:
         all_news.extend(fetch_from_rss(feed_url, name))
+    
+    if not all_news:
+        logging.warning("কোনো সোর্স থেকে খবর পাওয়া যায়নি! নেটওয়ার্ক বা ফিড চেক করুন।")
+    
     return all_news
